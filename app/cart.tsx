@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,41 +7,52 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Header from "./header";
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: "1",
-      image: require("../assets/images/product01.webp"),
-      name: "Đồng Hồ Rolex - Nam M126333-0012",
-      qty: 1,
-      size: "41mm",
-      price: 427500000,
-      selected: true,
-    },
-    {
-      id: "2",
-      image: require("../assets/images/product02.webp"),
-      name: "Đồng Hồ Rolex - Nam M126281RBR",
-      qty: 1,
-      size: "40mm",
-      price: 43700000,
-      selected: true,
-    },
-    {
-      id: "3",
-      image: require("../assets/images/product03.webp"),
-      name: "Đồng Hồ Rolex - Nam M126233-0025",
-      qty: 1,
-      size: "42mm",
-      price: 440000000,
-      selected: true,
-    },
-  ]);
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        // Fetch the cart data from the FakeStore API
+        const response = await fetch("https://fakestoreapi.com/carts/1");
+        const cartData = await response.json();
+
+        // Fetch product details for each productId in the cart
+        const productPromises = cartData.products.map(async (item) => {
+          const productResponse = await fetch(
+            `https://fakestoreapi.com/products/${item.productId}`
+          );
+          const productData = await productResponse.json();
+
+          return {
+            id: productData.id.toString(),
+            image: { uri: productData.image },
+            name: productData.title,
+            qty: item.quantity,
+            price: productData.price,
+            selected: true,
+          };
+        });
+
+        // Wait for all product data to be fetched
+        const formattedItems = await Promise.all(productPromises);
+        setCartItems(formattedItems);
+      } catch (error) {
+        console.error("Failed to fetch cart items:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCartItems();
+  }, []);
 
   const updateQuantity = (id, change) => {
     setCartItems((prevItems) =>
@@ -74,7 +85,7 @@ const Cart = () => {
       <Image source={item.image} style={styles.itemImage} />
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemInfo}>Size: {item.size}</Text>
+        <Text style={styles.itemInfo}>Quantity: {item.qty}</Text>
         <View style={styles.quantityControl}>
           <TouchableOpacity
             onPress={() => updateQuantity(item.id, -1)}
@@ -101,6 +112,14 @@ const Cart = () => {
     (sum, item) => (item.selected ? sum + item.price * item.qty : sum),
     0
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00796B" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -146,12 +165,12 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "bold",
     marginBottom: 20,
-    color: "#00796B", // Màu xanh đậm cho tiêu đề
+    color: "#00796B",
   },
   cartItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF", // Màu nền trắng cho từng mục giỏ hàng
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 15,
     marginBottom: 10,
@@ -176,7 +195,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#00796B", // Màu xanh đậm cho tên sản phẩm
+    color: "#00796B",
   },
   itemInfo: {
     fontSize: 14,
@@ -185,7 +204,7 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#00796B", // Màu cam cho giá sản phẩm
+    color: "#00796B",
   },
   quantityControl: {
     flexDirection: "row",
@@ -201,7 +220,7 @@ const styles = StyleSheet.create({
   quantityButtonText: {
     fontSize: 15,
     fontWeight: "bold",
-    color: "#00796B", // Màu xanh đậm cho nút tăng giảm số lượng
+    color: "#00796B",
   },
   quantity: {
     marginHorizontal: 10,
@@ -223,10 +242,10 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#00796B", // Màu cam cho tổng số tiền
+    color: "#00796B",
   },
   checkoutButton: {
-    backgroundColor: "#00796B", // Màu xanh đậm cho nút thanh toán
+    backgroundColor: "#00796B",
     padding: 10,
     borderRadius: 8,
     alignItems: "center",
@@ -236,6 +255,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

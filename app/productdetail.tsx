@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,55 +9,45 @@ import {
   FlatList,
   Dimensions,
 } from "react-native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import Header from "./header";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
-const ProductDetail = ({ navigation }) => {
-  const [selectedSize, setSelectedSize] = useState(null);
-  const [quantity, setQuantity] = useState(1);
+const ProductDetail = () => {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { product } = route.params;
 
-  const product = {
-    id: "1",
-    name: "Đồng Hồ Rolex - Nam M126333-0012",
-    price: 450000000,
-    salePrice: 427500000,
-    soldCount: 100,
-    image: require("../assets/images/product01.webp"),
-    description: "Mô tả chi tiết về sản phẩm.",
-    sizes: ["35-40mm", "40-45mm", "45-49mm", "FREE"],
+  const [quantity, setQuantity] = useState(1);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+
+  useEffect(() => {
+    fetchRelatedProducts();
+  }, []);
+
+  const fetchRelatedProducts = async () => {
+    try {
+      const response = await fetch("https://fakestoreapi.com/products?limit=4");
+      const data = await response.json();
+      setRelatedProducts(data.filter(item => item.id !== product.id));
+    } catch (error) {
+      console.error("Failed to fetch related products:", error);
+    }
   };
 
-  const relatedProducts = [
-    {
-      id: "2",
-      name: "Đồng Hồ Rolex - Nam M126281RBR",
-      price: 460000000,
-      image: require("../assets/images/product02.webp"),
-    },
-    {
-      id: "3",
-      name: "Đồng Hồ Rolex - Nam M126233-0025",
-      price: 440000000,
-      image: require("../assets/images/product03.webp"),
-    },
-    {
-      id: "4",
-      name: "Đồng Hồ Rolex - Nam M126334-0016",
-      price: 420000000,
-      image: require("../assets/images/product04.webp"),
-    },
-  ];
-
   const renderRelatedProduct = ({ item }) => (
-    <View style={styles.relatedProductItem}>
-      <Image source={item.image} style={styles.relatedProductImage} />
-      <Text style={styles.relatedProductName}>{item.name}</Text>
+    <TouchableOpacity 
+      style={styles.relatedProductItem}
+      onPress={() => navigation.push("ProductDetail", { product: item })}
+    >
+      <Image source={{ uri: item.image }} style={styles.relatedProductImage} />
+      <Text style={styles.relatedProductName} numberOfLines={2}>{item.title}</Text>
       <Text style={styles.relatedProductPrice}>
         {item.price.toLocaleString("vi-VN")} ₫
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 
   const increaseQuantity = () => setQuantity((prevQuantity) => prevQuantity + 1);
@@ -70,42 +60,19 @@ const ProductDetail = ({ navigation }) => {
         <ScrollView style={styles.scrollView}>
           <View style={styles.imageContainer}>
             <Image
-              source={product.image}
+              source={{ uri: product.image }}
               style={styles.productImage}
               resizeMode="contain"
             />
           </View>
           <View style={styles.infoContainer}>
-            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.productName}>{product.title}</Text>
             <View style={styles.priceContainer}>
               <View style={styles.priceWrapper}>
-                <Text
-                  style={[styles.price, product.salePrice && styles.strikethrough]}
-                >
+                <Text style={styles.price}>
                   {product.price.toLocaleString("vi-VN")} ₫
                 </Text>
-                {product.salePrice && (
-                  <Text style={styles.salePrice}>
-                    {product.salePrice.toLocaleString("vi-VN")} ₫
-                  </Text>
-                )}
               </View>
-              <Text style={styles.soldCount}>Đã bán {product.soldCount}</Text>
-            </View>
-
-            <Text style={styles.sectionTitle}>Chọn kích cỡ:</Text>
-            <View style={styles.sizeContainer}>
-              {product.sizes.map((size) => (
-                <TouchableOpacity
-                  key={size}
-                  style={[styles.sizeButton, selectedSize === size && styles.selectedSizeButton]}
-                  onPress={() => setSelectedSize(size)}
-                >
-                  <Text style={[styles.sizeButtonText, selectedSize === size && styles.selectedSizeButtonText]}>
-                    {size}
-                  </Text>
-                </TouchableOpacity>
-              ))}
             </View>
 
             <Text style={styles.sectionTitle}>Số lượng:</Text>
@@ -126,7 +93,7 @@ const ProductDetail = ({ navigation }) => {
             <FlatList
               data={relatedProducts}
               renderItem={renderRelatedProduct}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.id.toString()}
               horizontal
               showsHorizontalScrollIndicator={false}
             />

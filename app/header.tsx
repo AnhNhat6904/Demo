@@ -37,7 +37,7 @@ const Header = ({ item }) => {
           onPress={handleLogoPress}
         >
           <Image
-            source={require("../assets/images/logo.png")}
+            source={require("../assets/images/logo.jpg")}
             style={styles.logo}
           />
         </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,62 +7,12 @@ import {
   FlatList,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
-
-const products = [
-  {
-    id: "1",
-    name: "Đồng Hồ Rolex - Nam M126333-0012",
-    image: require("../assets/images/product01.webp"),
-    originalPrice: 450000000,
-    discountedPrice: 427500000,
-    soldCount: 100,
-  },
-  {
-    id: "2",
-    name: "Đồng Hồ Rolex - Nam M126281RBR",
-    image: require("../assets/images/product02.webp"),
-    originalPrice: 460000000,
-    discountedPrice: 437000000,
-    soldCount: 150,
-  },
-  {
-    id: "3",
-    name: "Đồng Hồ Rolex - Nam M126233-0025",
-    image: require("../assets/images/product03.webp"),
-    originalPrice: 440000000,
-    discountedPrice: 418000000,
-    soldCount: 150,
-  },
-  {
-    id: "4",
-    name: "Đồng Hồ Rolex - Nam M126334-0016",
-    image: require("../assets/images/product04.webp"),
-    originalPrice: 420000000,
-    discountedPrice: 392000000,
-    soldCount: 150,
-  },
-  {
-    id: "5",
-    name: "Đồng Hồ Rolex - Nam M126231-0037",
-    image: require("../assets/images/product05.webp"),
-    originalPrice: 430000000,
-    discountedPrice: 408500000,
-    soldCount: 150,
-  },
-  {
-    id: "6",
-    name: "Đồng Hồ Rolex - Nam M126331-0002",
-    image: require("../assets/images/product06.webp"),
-    originalPrice: 400000000,
-    discountedPrice: 380500000,
-    soldCount: 150,
-  },
-];
 
 const ProductItem = ({ item }) => {
   const navigation = useNavigation();
@@ -74,20 +24,16 @@ const ProductItem = ({ item }) => {
   return (
     <View style={styles.productItem}>
       <TouchableOpacity onPress={handleProductPress}>
-        <Image source={item.image} style={styles.productImage} />
+        <Image source={{ uri: item.image }} style={styles.productImage} />
       </TouchableOpacity>
       <Text style={styles.productName} numberOfLines={2}>
-        {item.name}
+        {item.title}
       </Text>
       <View style={styles.priceContainer}>
         <Text style={styles.discountedPrice}>
-          {item.discountedPrice.toLocaleString()} đ
-        </Text>
-        <Text style={styles.originalPrice}>
-          {item.originalPrice.toLocaleString()} đ
+          {item.price.toLocaleString()} đ
         </Text>
       </View>
-      <Text style={styles.soldCount}>Đã bán {item.soldCount}</Text>
       <TouchableOpacity style={styles.addToCartButton}>
         <Feather name="shopping-cart" size={18} color="white" />
         <Text style={styles.addToCartText}>Thêm vào giỏ</Text>
@@ -97,11 +43,38 @@ const ProductItem = ({ item }) => {
 };
 
 const ProductList = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch("https://fakestoreapi.com/products");
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007BFF" />
+      </View>
+    );
+  }
+
   return (
     <FlatList
       data={products}
       renderItem={({ item }) => <ProductItem item={item} />}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item) => item.id.toString()}
       numColumns={2}
       contentContainerStyle={styles.productList}
     />
@@ -109,15 +82,20 @@ const ProductList = () => {
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   productList: {
-    padding: 5, // Giảm khoảng cách tổng thể để tiết kiệm không gian
+    padding: 5,
   },
   productItem: {
     width: (width - 30) / 2,
     backgroundColor: "white",
     borderRadius: 8,
     padding: 10,
-    marginBottom: 15, // Tăng khoảng cách giữa các sản phẩm
+    marginBottom: 15,
     marginHorizontal: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -126,8 +104,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   productImage: {
-    width: "100%", // Sử dụng chiều rộng 100% để đảm bảo hình ảnh vừa khít
-    height: 150, // Điều chỉnh chiều cao hình ảnh
+    width: "100%",
+    height: 150,
     borderRadius: 8,
     marginBottom: 10,
   },
@@ -144,21 +122,11 @@ const styles = StyleSheet.create({
   discountedPrice: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#FF4500", // Màu đỏ cho giá khuyến mãi
+    color: "#FF4500",
     marginRight: 5,
   },
-  originalPrice: {
-    fontSize: 12,
-    color: "#888",
-    textDecorationLine: "line-through",
-  },
-  soldCount: {
-    fontSize: 12,
-    color: "#888",
-    marginBottom: 10,
-  },
   addToCartButton: {
-    backgroundColor: "#007BFF", // Màu xanh cho nút thêm vào giỏ
+    backgroundColor: "#007BFF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
